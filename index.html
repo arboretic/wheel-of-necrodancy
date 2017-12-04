@@ -1,0 +1,185 @@
+<!--
+    Winhweel.js 2-part wheel example by Douglas McKechie @ www.dougtesting.net
+    See website for tutorials and other documentation.
+
+    The MIT License (MIT)
+
+    Copyright (c) 2017 Douglas McKechie
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+-->
+<html>
+    <head>
+        <title>HTML5 Canvas Winning Wheel</title>
+        <link rel="stylesheet" href="main.css" type="text/css" />
+        <script type="text/javascript" src="winwheel.js"></script>
+        <script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+    </head>
+    <body>
+        <div align="center">
+            <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td>
+                        <div class="power_controls">
+                            <img id="spin_button" class="clickable" src="spin_on.png" alt="Spin" onClick="startSpin();" />
+                        </div>
+                    </td>
+                    <td class="the_wheel" align="center" valign="center">
+                        <canvas id="canvas" width="750" height="750">
+                            <p style="{color: white}" align="center">Sorry, your browser doesn't support canvas. Please try another.</p>
+                        </canvas>
+                    </td>
+                    <td valign="center" class="pointer">
+                        ◀
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <script>
+            // Need to create the SECONDARY wheel first because on construct the variable which keeps track of the wheel to animate will
+            // be set to the last created wheel, and we want the outer one the primary with the animation etc.
+            var innerWheel = new Winwheel({
+                'numSegments' : 13,
+                'outerRadius' : 200,        // Set the outer radius to make the wheel smaller than the outer wheel.
+                'textFontFamily' : "NecroSans",
+                'textFillStyle' : "#fff",
+                'segments': [
+                    {'fillStyle' : '#831', 'text': 'Cadence'},
+                    {'fillStyle' : '#770', 'text': 'Melody'},
+                    {'fillStyle' : '#555', 'text': 'Aria'},
+                    {'fillStyle' : '#762', 'text': 'Dorian'},
+                    {'fillStyle' : '#755', 'text': 'Eli'},
+                    {'fillStyle' : '#869', 'text': 'Dove'},
+                    {'fillStyle' : '#884', 'text': 'Bolt'},
+                    {'fillStyle' : '#366', 'text': 'Bard'},
+                    {'fillStyle' : '#641', 'text': 'Monk'},
+                    {'fillStyle' : '#357', 'text': 'Nocturna'},
+                    {'fillStyle' : '#850', 'text': 'Diamond'},
+                    {'fillStyle' : '#366', 'text': 'Tempo'},
+                    {'fillStyle' : '#888', 'text': 'Mary'},
+                ],
+                'animation': {
+                  'type': 'spinToStop',                     // Define animation more or less as normal, except for the callbackAfter().
+                  'duration': 5,
+                  'spins': 5,
+                  'direction': 'anti-clockwise',
+                  'easing': 'Power3.easeOut',
+                  'callbackAfter' : 'drawInnerWheel()',     // Call back after each frame of the animation a function we can draw the inner wheel from.
+                  'callbackFinished': 'alertPrize()'
+                }
+            });
+
+            // Define the outer wheel, we will treat this as the PRIMARY which means it clears the canvas when drawing and also
+            // gets the animaton applied to it. We must callback a function during the animation to move and draw the inner wheel
+            // so the 2 wheels appear as one thing on the canvas.
+            var outerWheel = new Winwheel({
+                'numSegments': 12,
+                'textMargin' : 0,
+                'textFontFamily' : "NecroSans",
+                'textFillStyle' : "#fff",
+                'outerRadius' : 370,
+                'innerRadius' : 200,    // Set inner radius to the size of the inner wheel since the inner part of the wheel
+                'segments': [
+                    {'fillStyle' : '#000', 'text': 'Normal'},
+                    {'fillStyle' : '#224', 'text': 'Randomizer'},
+                    {'fillStyle' : '#222', 'text': 'Low%'},
+                    {'fillStyle' : '#133', 'text': 'Mystery'},
+                    {'fillStyle' : '#000', 'text': 'Normal'},
+                    {'fillStyle' : '#543', 'text': 'Phasing'},
+                    {'fillStyle' : '#311', 'text': 'No Return'},
+                    {'fillStyle' : '#224', 'text': 'Randomizer'},
+                    {'fillStyle' : '#000', 'text': 'Normal'},
+                    {'fillStyle' : '#133', 'text': 'Mystery'},
+                    {'fillStyle' : '#331', 'text': 'Deathless'},
+                    {'fillStyle' : '#543', 'text': 'Phasing'},
+                ],
+                'animation': {
+                  'type': 'spinToStop',                     // Define animation more or less as normal, except for the callbackAfter().
+                  'duration': 5,
+                  'spins': 5,
+                  'easing': 'Power3.easeOut',
+                  'callbackAfter' : 'drawInnerWheel()',     // Call back after each frame of the animation a function we can draw the inner wheel from.
+                  'callbackFinished': 'alertPrize()'                }
+            });
+
+            // Call draw on the outerWheel then the inner wheel to ensure that both are rendered on the canvas.
+            outerWheel.draw();
+            innerWheel.draw(false);   // Pass false to stop it clearing the canvas and wiping the outer wheel.
+
+            // This function is called after the outer wheel has drawn during the animation.
+            function drawInnerWheel()
+            {
+                // Update the rotationAngle of the innnerWheel to match that of the outer wheel - this is a big part of what
+                // links them to appear as one 2-part wheel. Call the draw function passing false so the outer wheel is not wiped.
+                innerWheel.draw(false);
+            }
+
+            // Called when the animation has finished.
+            function alertPrize()
+            {
+                // The the indicated segments from the 2 wheels.
+                var winningInnerSegment = innerWheel.getIndicatedSegment();
+                var winningOuterSegment = outerWheel.getIndicatedSegment();
+
+                // Set things so power and spin button can be clicked again.
+                wheelSpinning = false;
+            }
+
+
+            // ================================================================================================================
+            // FUNCTIONS FOR power controls below (All this is not necessary to actually create and spin a wheel)....
+            // Vars used by the code in this page to do power controls.
+            var wheelPower    = 2;
+            var wheelSpinning = false;
+
+            // -------------------------------------------------------
+            // Click handler for spin button.
+            // -------------------------------------------------------
+            function startSpin()
+            {
+                // Ensure that spinning can't be clicked again while already running.
+                if (wheelSpinning == false)
+                {
+                    // Reset things with inner and outer wheel so spinning will work as expected. Without the reset the
+                    // wheel will probably just move a small amount since the rotationAngle would be close to the targetAngle
+                    // figured out by the animation.
+                    outerWheel.stopAnimation(false);  // Stop the animation, false as param so does not call callback function.
+                    // innerWheel.stopAnimation(false);  // Stop the animation, false as param so does not call callback function.
+                    outerWheel.rotationAngle = 0;     // Re-set the wheel angle to 0 degrees.
+                    outerWheel.draw();                // Call draw to render changes to the wheel.
+                    innerWheel.rotationAngle = 0;
+                    innerWheel.draw(false);
+
+                    outerWheel.animation.spins = 6;
+                    outerWheel.animation.duration = 12;
+                    innerWheel.animation.spins = 6;
+                    innerWheel.animation.duration = 12;
+
+                    // Begin the spin animation by calling startAnimation on the wheel object.
+                    innerWheel.startAnimation();
+                    outerWheel.startAnimation();
+
+                    // Set to true so that power can't be changed and spin button re-enabled during
+                    // the current animation. The user will have to reset before spinning again.
+                    wheelSpinning = true;
+                }
+            }
+        </script>
+    </body>
+</html>
